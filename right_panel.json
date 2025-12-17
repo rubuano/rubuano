@@ -1,0 +1,69 @@
+[
+    {
+        "label": "Uptime",
+        "value": "22 years, 5 months, 29 days",
+        "id": "age_data"
+    },
+    {
+        "label": "Location",
+        "value": "Le Havre, France"
+    },
+    {
+        "label": "Timezone",
+        "value": "Europe/Paris (CET/CEST)"
+    },
+    {
+        "label": "Status",
+        "value": "Full-stack web developer"
+    },
+    {
+        "label": "Hobbies",
+        "value": "Building, Learning, Tinkering"
+    },
+    {
+        "type": "empty"
+    },
+    {
+        "type": "separator",
+        "text": "- Using -"
+    },
+    {
+        "label": "Main device",
+        "value": "MacBook Pro 14 (M4 Pro)"
+    },
+    {
+        "label": "Tools",
+        "value": "Raycast, Arc, Zed, Copilot"
+    },
+    {
+        "label": "Languages.Programming",
+        "value": "PHP, JavaScript, Shell scripting"
+    },
+    {
+        "label": "Languages.Frameworks",
+        "value": "Laravel, Vue.js"
+    },
+    {
+        "label": "Languages.Libraries",
+        "value": "Vue.js, Tailwind, Shadcn"
+    },
+    {
+        "type": "empty"
+    },
+    {
+        "type": "separator",
+        "text": "- Contact -"
+    },
+    {
+        "label": "Website",
+        "value": "https://rubuano.dev"
+    },
+    {
+        "label": "Email",
+        "value": "simon@rubuano.dev"
+    },
+    {
+        "label": "LinkedIn",
+        "value": "Simon Rubuano"
+    }
+]

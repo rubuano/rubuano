@@ -5,6 +5,7 @@ import os
 from lxml import etree
 import time
 import hashlib
+import json
 
 # Fine-grained personal access token with All Repositories access:
 # Account permissions: read:Followers, read:Starring, read:Watching
@@ -22,8 +23,8 @@ def daily_readme(birthday):
     """
     diff = relativedelta.relativedelta(datetime.datetime.today(), birthday)
     return '{} {}, {} {}, {} {}{}'.format(
-        diff.years, 'year' + format_plural(diff.years), 
-        diff.months, 'month' + format_plural(diff.months), 
+        diff.years, 'year' + format_plural(diff.years),
+        diff.months, 'month' + format_plural(diff.months),
         diff.days, 'day' + format_plural(diff.days),
         ' 🎂' if (diff.months == 0 and diff.days == 0) else '')
 
@@ -157,7 +158,7 @@ def recursive_loc(owner, repo_name, data, cache_comment, addition_total=0, delet
 
 def loc_counter_one_repo(owner, repo_name, data, cache_comment, history, addition_total, deletion_total, my_commits):
     """
-    Recursively call recursive_loc (since GraphQL can only search 100 commits at a time) 
+    Recursively call recursive_loc (since GraphQL can only search 100 commits at a time)
     only adds the LOC value of commits authored by me
     """
     for node in history['edges']:
@@ -284,7 +285,7 @@ def add_archive():
     with open('cache/repository_archive.txt', 'r') as f:
         data = f.readlines()
     old_data = data
-    data = data[7:len(data)-3] # remove the comment block    
+    data = data[7:len(data)-3] # remove the comment block
     added_loc, deleted_loc, added_commits = 0, 0, 0
     contributed_repos = len(data)
     for line in data:
@@ -322,6 +323,12 @@ def svg_overwrite(filename, age_data, commit_data, star_data, repo_data, contrib
     """
     tree = etree.parse(filename)
     root = tree.getroot()
+    # Inject right panel content generated from JSON FIRST
+    try:
+        insert_right_panel(root, 'right_panel.json')
+    except Exception as e:
+        pass
+    # Then update dynamic values
     justify_format(root, 'commit_data', commit_data, 22)
     justify_format(root, 'star_data', star_data, 14)
     justify_format(root, 'repo_data', repo_data, 6)
@@ -330,7 +337,147 @@ def svg_overwrite(filename, age_data, commit_data, star_data, repo_data, contrib
     justify_format(root, 'loc_data', loc_data[2], 9)
     justify_format(root, 'loc_add', loc_data[0])
     justify_format(root, 'loc_del', loc_data[1], 7)
+    # Update age_data which was inserted by insert_right_panel
+    justify_format(root, 'age_data', age_data)
     tree.write(filename, encoding='utf-8', xml_declaration=True)
+
+
+def insert_right_panel(root, json_path='right_panel.json', start_x=390, start_y=50, line_height=20):
+    """Generate and insert right-panel tspans into the main text element.
+
+    The function finds the text element that contains the "GitHub Stats" line and inserts
+    the generated tspans before it.
+    JSON format: array of objects with keys: label, value, type, id, text
+    """
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            items = json.load(f)
+    except FileNotFoundError:
+        return
+
+    # Handle SVG namespaces
+    ns = root.nsmap.get(None) or 'http://www.w3.org/2000/svg'
+
+    # Find the text element containing "GitHub Stats"
+    text_elems = root.findall('.//{%s}text' % ns)
+    target_text_elem = None
+    github_stats_idx = None
+
+    for text_elem in text_elems:
+        tspans = text_elem.findall('{%s}tspan' % ns)
+        for idx, tspan in enumerate(tspans):
+            if tspan.text and '- GitHub Stats' in tspan.text:
+                target_text_elem = text_elem
+                github_stats_idx = idx
+                break
+        if target_text_elem is not None:
+            break
+
+    if target_text_elem is None or github_stats_idx is None:
+        return
+
+    # Remove any old age_data related tspans to avoid duplicates
+    tspans = target_text_elem.findall('{%s}tspan' % ns)
+    to_remove = []
+    for tspan in tspans:
+        elem_id = tspan.get('id')
+        if elem_id in ['age_data', 'age_data_dots']:
+            to_remove.append(tspan)
+    for elem in to_remove:
+        target_text_elem.remove(elem)
+
+    # Recalculate github_stats_idx after removals
+    tspans = target_text_elem.findall('{%s}tspan' % ns)
+    for idx, tspan in enumerate(tspans):
+        if tspan.text and '- GitHub Stats' in tspan.text:
+            github_stats_idx = idx
+            break
+
+    # Generate new tspans and insert them before github_stats_idx
+    insert_idx = github_stats_idx
+    y = start_y
+
+    for item in items:
+        itype = item.get('type')
+        if itype == 'separator':
+            t = etree.Element('{%s}tspan' % ns)
+            t.set('x', str(start_x))
+            t.set('y', str(y))
+            t.text = item.get('text', '')
+            target_text_elem.insert(insert_idx, t)
+            insert_idx += 1
+            y += line_height
+            continue
+
+        if itype == 'empty':
+            # create a blank leading dot line to preserve spacing
+            t0 = etree.Element('{%s}tspan' % ns)
+            t0.set('x', str(start_x))
+            t0.set('y', str(y))
+            t0.set('class', 'cc')
+            t0.text = '. '
+            target_text_elem.insert(insert_idx, t0)
+            insert_idx += 1
+            y += line_height
+            continue
+
+        label = item.get('label', '')
+        value = item.get('value', '')
+        vid = item.get('id')
+
+        # leading dot
+        t0 = etree.Element('{%s}tspan' % ns)
+        t0.set('x', str(start_x))
+        t0.set('y', str(y))
+        t0.set('class', 'cc')
+        t0.text = '. '
+        target_text_elem.insert(insert_idx, t0)
+        insert_idx += 1
+
+        # key
+        t1 = etree.Element('{%s}tspan' % ns)
+        t1.set('class', 'key')
+        t1.text = label
+        target_text_elem.insert(insert_idx, t1)
+        insert_idx += 1
+
+        # colon
+        tcol = etree.Element('{%s}tspan' % ns)
+        tcol.text = ':'
+        target_text_elem.insert(insert_idx, tcol)
+        insert_idx += 1
+
+        # compute dots so the whole line is 61 characters long
+        # Format: . Label: space dots space value = 61 chars total
+        # That's: 2 + L + 1 + 1 + D + 1 + V = 61, so D = 61 - (L + V + 5)
+        L = len(str(label))
+        V = len(str(value))
+        D = 61 - (L + V + 5)
+        if D <= 0:
+            dot_string = '.'
+        else:
+            dot_string = '.' * D
+
+        # dots spacer: space + dots + space
+        t2 = etree.Element('{%s}tspan' % ns)
+        t2.set('class', 'cc')
+        if vid == 'age_data':
+            t2.set('id', 'age_data_dots')
+        # Format: space + dots + space (no leading space in dot_string since we add it here)
+        t2.text = ' ' + dot_string + ' '
+        target_text_elem.insert(insert_idx, t2)
+        insert_idx += 1
+
+        # value
+        t3 = etree.Element('{%s}tspan' % ns)
+        t3.set('class', 'value')
+        if vid == 'age_data':
+            t3.set('id', 'age_data')
+        t3.text = value
+        target_text_elem.insert(insert_idx, t3)
+        insert_idx += 1
+
+        y += line_height
 
 
 def justify_format(root, element_id, new_text, length=0):
@@ -341,6 +488,41 @@ def justify_format(root, element_id, new_text, length=0):
         new_text = f"{'{:,}'.format(new_text)}"
     new_text = str(new_text)
     find_and_replace(root, element_id, new_text)
+
+    # Special handling for age_data: recalculate dots using the same formula as insert_right_panel
+    if element_id == 'age_data':
+        # Find the label text from the previous tspan element
+        ns = root.nsmap.get(None) or 'http://www.w3.org/2000/svg'
+        age_data_elem = root.find('.//{%s}*[@id="age_data"]' % ns)
+        if age_data_elem is not None:
+            parent = age_data_elem.getparent()
+            # Find the index of age_data element
+            idx = list(parent).index(age_data_elem)
+            # Get previous element (should be the dots element)
+            if idx >= 2:
+                # Look back to find the label (usually idx-3 or idx-2)
+                label_elem = None
+                for i in range(idx-1, max(0, idx-5), -1):
+                    potential_label = parent[i]
+                    if potential_label.get('class') == 'key':
+                        label_elem = potential_label
+                        break
+                if label_elem is not None and label_elem.text:
+                    label = label_elem.text
+                    # Recalculate dots using insert_right_panel formula: D = 61 - (L + V + 5)
+                    # Format: . Label: space dots space value = 61 chars total
+                    L = len(str(label))
+                    V = len(str(new_text))
+                    D = 61 - (L + V + 5)
+                    if D <= 0:
+                        dot_string = '.'
+                    else:
+                        dot_string = '.' * D
+                    # Format: space + dots + space
+                    find_and_replace(root, 'age_data_dots', ' ' + dot_string + ' ')
+                    return
+
+    # Default behavior for other elements
     just_len = max(0, length - len(new_text))
     if just_len <= 2:
         dot_map = {0: '', 1: ' ', 2: '. '}
@@ -354,7 +536,10 @@ def find_and_replace(root, element_id, new_text):
     """
     Finds the element in the SVG file and replaces its text with a new value
     """
-    element = root.find(f".//*[@id='{element_id}']")
+    # Handle SVG namespaces
+    ns = root.nsmap.get(None) or 'http://www.w3.org/2000/svg'
+
+    element = root.find('.//{%s}*[@id="%s"]' % (ns, element_id))
     if element is not None:
         element.text = new_text
 
@@ -447,7 +632,7 @@ if __name__ == '__main__':
     user_data, user_time = perf_counter(user_getter, USER_NAME)
     OWNER_ID, acc_date = user_data
     formatter('account data', user_time)
-    age_data, age_time = perf_counter(daily_readme, datetime.datetime(2002, 7, 5))
+    age_data, age_time = perf_counter(daily_readme, datetime.datetime(1995, 9, 18))
     formatter('age calculation', age_time)
     total_loc, loc_time = perf_counter(loc_query, ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'], 7)
     formatter('LOC (cached)', loc_time) if total_loc[-1] else formatter('LOC (no cache)', loc_time)
@@ -456,14 +641,6 @@ if __name__ == '__main__':
     repo_data, repo_time = perf_counter(graph_repos_stars, 'repos', ['OWNER'])
     contrib_data, contrib_time = perf_counter(graph_repos_stars, 'repos', ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'])
     follower_data, follower_time = perf_counter(follower_getter, USER_NAME)
-
-    # several repositories that I've contributed to have since been deleted.
-    if OWNER_ID == {'id': 'MDQ6VXNlcjU3MzMxMTM0'}: # only calculate for user Andrew6rant
-        archived_data = add_archive()
-        for index in range(len(total_loc)-1):
-            total_loc[index] += archived_data[index]
-        contrib_data += archived_data[-1]
-        commit_data += int(archived_data[-2])
 
     for index in range(len(total_loc)-1): total_loc[index] = '{:,}'.format(total_loc[index]) # format added, deleted, and total LOC
 

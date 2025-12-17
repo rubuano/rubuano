@@ -25,6 +25,10 @@ jobs:
           restore-keys: ${{ runner.os }}-pip-
       - name: Install dependencies
         run: python -m pip install -r cache/requirements.txt
+      - name: Copy base files
+        run: |
+          cp dark_mode_base.svg dark_mode.svg
+          cp light_mode_base.svg light_mode.svg
       - name: Update README file
         env:
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}

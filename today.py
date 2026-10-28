@@ -246,7 +246,7 @@ def cache_builder(edges, comment_size, force_cache, loc_add=0, loc_del=0):
 
     if len(data)-comment_size != len(edges) or force_cache: # If the number of repos has changed, or force_cache is True
         cached = False
-        flush_cache(edges, filename, comment_size)
+        flush_cache(edges, filename, comment_size, force_cache)
         with open(filename, 'r') as f:
             data = f.readlines()
 
@@ -273,19 +273,21 @@ def cache_builder(edges, comment_size, force_cache, loc_add=0, loc_del=0):
     return [loc_add, loc_del, loc_add - loc_del, cached]
 
 
-def flush_cache(edges, filename, comment_size):
+def flush_cache(edges, filename, comment_size, force_cache=False):
     """
-    Wipes the cache file
+    Rebuilds the cache file for the current list of repositories
     This is called when the number of repositories changes or when the file is first created
+    Repositories already in the cache keep their line, so only new ones get counted (unless force_cache)
     """
     with open(filename, 'r') as f:
-        data = []
-        if comment_size > 0:
-            data = f.readlines()[:comment_size] # only save the comment
+        lines = f.readlines()
+    data = lines[:comment_size] # only save the comment
+    known = {} if force_cache else {line.split()[0]: line for line in lines[comment_size:] if line.strip()}
     with open(filename, 'w') as f:
         f.writelines(data)
         for node in edges:
-            f.write(hashlib.sha256(node['node']['nameWithOwner'].encode('utf-8')).hexdigest() + ' 0 0 0 0\n')
+            repo_hash = hashlib.sha256(node['node']['nameWithOwner'].encode('utf-8')).hexdigest()
+            f.write(known.get(repo_hash, repo_hash + ' 0 0 0 0\n'))
 
 
 def add_archive():

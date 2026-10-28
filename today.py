@@ -342,7 +342,7 @@ def svg_overwrite(filename, age_data, commit_data, star_data, repo_data, contrib
     except Exception as e:
         pass
     # Then update dynamic values
-    justify_format(root, 'commit_data', commit_data, 22)
+    justify_format(root, 'commit_data', commit_data, 23)
     justify_format(root, 'star_data', star_data, 14)
     justify_format(root, 'repo_data', repo_data, 6)
     justify_format(root, 'contrib_data', contrib_data)
@@ -416,21 +416,15 @@ def insert_right_panel(root, json_path='right_panel.json', start_x=390, start_y=
             t = etree.Element('{%s}tspan' % ns)
             t.set('x', str(start_x))
             t.set('y', str(y))
-            t.text = item.get('text', '')
+            text = item.get('text', '')
+            t.text = text + ' -' + '—' * (56 - len(text)) + '-—-' # full-width rule, 61 chars like the data lines
             target_text_elem.insert(insert_idx, t)
             insert_idx += 1
             y += line_height
             continue
 
         if itype == 'empty':
-            # create a blank leading dot line to preserve spacing
-            t0 = etree.Element('{%s}tspan' % ns)
-            t0.set('x', str(start_x))
-            t0.set('y', str(y))
-            t0.set('class', 'cc')
-            t0.text = '. '
-            target_text_elem.insert(insert_idx, t0)
-            insert_idx += 1
+            # blank line, no leading dot (same as the gap before GitHub Stats)
             y += line_height
             continue
 
@@ -463,8 +457,10 @@ def insert_right_panel(root, json_path='right_panel.json', start_x=390, start_y=
         # compute dots so the whole line is 61 characters long
         # Format: . Label: space dots space value = 61 chars total
         # That's: 2 + L + 1 + 1 + D + 1 + V = 61, so D = 61 - (L + V + 5)
+        # a list value is shown as items separated by a muted '; '
+        items_list = value if isinstance(value, list) else [value]
         L = len(str(label))
-        V = len(str(value))
+        V = len('; '.join(items_list))
         D = 61 - (L + V + 5)
         if D <= 0:
             dot_string = '.'
@@ -486,7 +482,12 @@ def insert_right_panel(root, json_path='right_panel.json', start_x=390, start_y=
         t3.set('class', 'value')
         if vid == 'age_data':
             t3.set('id', 'age_data')
-        t3.text = value
+        t3.text = items_list[0]
+        for list_item in items_list[1:]:
+            sep = etree.SubElement(t3, '{%s}tspan' % ns)
+            sep.set('class', 'cc')
+            sep.text = '; '
+            sep.tail = list_item
         target_text_elem.insert(insert_idx, t3)
         insert_idx += 1
 

@@ -14,45 +14,85 @@
     },
     {
         "label": "Status",
-        "value": "Full-stack web developer"
+        "value": [
+            "Lead dev @ Saqara",
+            "Freelance full-stack"
+        ]
     },
     {
         "label": "Hobbies",
-        "value": "Building, Learning, Tinkering"
+        "value": [
+            "Indie games",
+            "Homelab",
+            "Workflow"
+        ]
     },
     {
         "type": "empty"
     },
     {
         "type": "separator",
-        "text": "- Using -"
+        "text": "- Using"
     },
     {
         "label": "Main device",
         "value": "MacBook Pro 14 (M4 Pro)"
     },
     {
+        "label": "Terminal",
+        "value": [
+            "Ghostty",
+            "herdr",
+            "Maple Mono",
+            "Plastic"
+        ]
+    },
+    {
+        "label": "AI",
+        "value": [
+            "Claude Code",
+            "Amp",
+            "GitHub Copilot"
+        ]
+    },
+    {
         "label": "Tools",
-        "value": "Raycast, Arc, Zed, Copilot"
+        "value": [
+            "Tinycast",
+            "Zed",
+            "1Password"
+        ]
     },
     {
         "label": "Languages.Programming",
-        "value": "PHP, JavaScript, Shell scripting"
+        "value": [
+            "PHP",
+            "TypeScript",
+            "Python",
+            "Shell"
+        ]
     },
     {
         "label": "Languages.Frameworks",
-        "value": "Laravel, Vue.js"
+        "value": [
+            "Laravel",
+            "Vue.js",
+            "Astro"
+        ]
     },
     {
         "label": "Languages.Libraries",
-        "value": "Vue.js, Tailwind, Shadcn"
+        "value": [
+            "Tailwind",
+            "Shadcn"
+        ]
     },
     {
         "type": "empty"
     },
     {
         "type": "separator",
-        "text": "- Contact -"
+        "text": "- Contact"
     },
     {
         "label": "Website",
@@ -64,6 +104,6 @@
     },
     {
         "label": "LinkedIn",
-        "value": "Simon Rubuano"
+        "value": "linkedin.com/in/simonrubuano"
     }
 ]
